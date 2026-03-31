@@ -1,0 +1,195 @@
+[
+  {
+    "id": "log-20d5f8bfb7d6c5fe",
+    "at": "2026-03-31T06:25:54.765Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "login_success",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "details": {
+      "username": "admin",
+      "loginId": "admin",
+      "via": "local"
+    }
+  },
+  {
+    "id": "log-ef5b93c92c446fca",
+    "at": "2026-03-29T12:16:58.517Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "search",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "details": {
+      "query": "",
+      "filters": {},
+      "resultCount": 93,
+      "sheets": [
+        "متابعة الكفالات"
+      ]
+    }
+  },
+  {
+    "id": "log-7ac909e673c088af",
+    "at": "2026-03-29T12:16:58.463Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "search",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "details": {
+      "query": "",
+      "filters": {},
+      "resultCount": 41,
+      "sheets": [
+        "غيرمكفولين"
+      ]
+    }
+  },
+  {
+    "id": "log-eba64da7c40e5023",
+    "at": "2026-03-29T12:16:58.407Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "search",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "details": {
+      "query": "",
+      "filters": {},
+      "resultCount": 83,
+      "sheets": [
+        "مكفولين"
+      ]
+    }
+  },
+  {
+    "id": "log-0ed2a1cf3855bf3c",
+    "at": "2026-03-29T12:16:46.358Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "login_success",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "details": {
+      "username": "admin",
+      "loginId": "test@test.com",
+      "via": "firebase"
+    }
+  },
+  {
+    "id": "log-c166f78614fd0aa1",
+    "at": "2026-03-29T07:52:09.414Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "login_success",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "details": {
+      "username": "admin",
+      "loginId": "test@test.com",
+      "via": "firebase"
+    }
+  },
+  {
+    "id": "log-3648ace251c47f71",
+    "at": "2026-03-29T07:38:53.753Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "login_success",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "details": {
+      "username": "admin",
+      "loginId": "test@test.com",
+      "via": "firebase"
+    }
+  },
+  {
+    "id": "log-a4ef12083f0daea8",
+    "at": "2026-03-29T07:30:51.252Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "login_success",
+    "ip": "::1",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36",
+    "details": {
+      "username": "admin",
+      "loginId": "test@test.com",
+      "via": "firebase"
+    }
+  },
+  {
+    "id": "log-2f0a56de916ca2d6",
+    "at": "2026-03-28T11:07:16.635Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "search",
+    "ip": "::1",
+    "userAgent": "curl/8.10.1",
+    "details": {
+      "query": "",
+      "filters": {},
+      "resultCount": 217,
+      "sheets": [
+        "مكفولين",
+        "غيرمكفولين",
+        "متابعة الكفالات"
+      ]
+    }
+  },
+  {
+    "id": "log-5c3394e5cc7e8a55",
+    "at": "2026-03-28T11:07:10.422Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "login_success",
+    "ip": "::1",
+    "userAgent": "curl/8.10.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "id": "log-1376c047e511cf5f",
+    "at": "2026-03-28T09:54:29.347Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "search",
+    "ip": "::1",
+    "userAgent": "curl/8.10.1",
+    "details": {
+      "query": "محمد",
+      "filters": {},
+      "resultCount": 36,
+      "sheets": [
+        "مكفولين"
+      ]
+    }
+  },
+  {
+    "id": "log-b4755fd6baa4bda0",
+    "at": "2026-03-28T09:54:29.281Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "login_success",
+    "ip": "::1",
+    "userAgent": "curl/8.10.1",
+    "details": {
+      "username": "admin"
+    }
+  },
+  {
+    "id": "log-25e73b6bf35591aa",
+    "at": "2026-03-28T09:54:18.772Z",
+    "userId": "u-admin",
+    "username": "admin",
+    "action": "login_success",
+    "ip": "::1",
+    "userAgent": "curl/8.10.1",
+    "details": {
+      "username": "admin"
+    }
+  }
+]

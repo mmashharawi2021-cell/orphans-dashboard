@@ -1,0 +1,40 @@
+[
+  {
+    "id": "u-admin",
+    "username": "admin",
+    "displayName": "مدير النظام",
+    "role": "مدير نظام",
+    "active": true,
+    "passwordHash": "$2a$10$UwoddXB3Gfc0ZNFBIogIEONQ.JhZuz/ZdWutJL.OeVeIZjoGva1nu",
+    "mustChangePassword": true,
+    "createdAt": "2026-03-28T09:54:03.851Z",
+    "failedAttempts": 0,
+    "lockUntil": null,
+    "sheetAccess": "*",
+    "fieldRules": {
+      "hideSensitive": false,
+      "hiddenFields": []
+    },
+    "permissions": {
+      "canSearch": true,
+      "canViewResults": true,
+      "canViewFullDetails": true,
+      "canAdd": true,
+      "canEdit": true,
+      "canEditOwnOnly": false,
+      "canArchive": true,
+      "canRestore": true,
+      "canExport": true,
+      "canImport": true,
+      "canManageUsers": true,
+      "canManagePermissions": true,
+      "canViewStats": true,
+      "canViewSensitive": true,
+      "canEditSensitive": true,
+      "canViewLogs": true,
+      "canManageSettings": true
+    },
+    "gender": "male",
+    "email": "test@test.com"
+  }
+]

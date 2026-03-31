@@ -1,0 +1,15 @@
+{
+  "systemName": "نظام إدارة بيانات الأيتام",
+  "brand": "نظام إدارة بيانات الأيتام",
+  "sessionMinutes": 60,
+  "maxFailedAttempts": 5,
+  "lockMinutes": 20,
+  "themeDefault": "light",
+  "rateUSD": 3.65,
+  "rateJOD": 5.14,
+  "rateUSDT": 3.65,
+  "customCurrencyName": "",
+  "customCurrencyCode": "",
+  "customCurrencyRate": 0,
+  "customCurrencyIcon": "bi bi-currency-exchange"
+}

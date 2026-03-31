@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نظام إدارة بيانات الأيتام</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <link rel="stylesheet" href="/style.css" />
+
+  <style>
+    .topbar{padding:14px 18px !important; min-height:74px !important; border-radius:18px !important;}
+    .topbar h2{font-size:1.15rem !important; margin-bottom:4px !important;}
+    .user-chip{padding:8px 12px !important; min-height:58px !important;}
+    .dashboard-grid,.stats-grid,.user-grid,.cards-view{gap:14px !important;}
+    .widget,.record-card,.user-card,.stat-box{padding:14px !important; border-radius:18px !important;}
+    .widget-title,.card-title{font-size:1rem !important;}
+    .widget-value{font-size:1.4rem !important;}
+    .currency-card{padding:12px !important; min-height:130px !important;}
+    .search-grid,.advanced-grid,.settings-grid{gap:12px !important;}
+    .panel{padding:16px !important; border-radius:18px !important;}
+    .field-attachments{grid-column:1/-1;}
+    .attachments-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+    .attachments-wrap{margin-top:10px}
+    .attachment-item{border:1px solid var(--border,rgba(255,255,255,.12));border-radius:16px;padding:10px;background:rgba(255,255,255,.03)}
+    .attachment-thumb{width:100%;height:110px;object-fit:cover;border-radius:12px;margin-bottom:8px}
+    .attachment-file{height:110px;display:flex;align-items:center;justify-content:center;border-radius:12px;background:rgba(255,255,255,.04);font-size:34px;margin-bottom:8px}
+    .attachment-name{font-weight:700;font-size:.92rem;word-break:break-word;margin-bottom:8px}
+    .attachment-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .btn.mini{padding:.35rem .55rem;font-size:.82rem}
+    .btn.danger{border-color:rgba(255,92,92,.3);color:#ff6b6b}
+    #statsReviewPanel{margin-top:16px}
+    .duplicate-group{padding:14px;border-radius:18px;border:1px solid var(--border,rgba(255,255,255,.12));background:rgba(255,255,255,.03);margin-bottom:12px}
+  </style>
+</head>
+<body class="light theme-admin">
+  <div id="toast" class="toast"></div>
+
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card glass entrance">
+      <div class="brand-hero">
+        <div class="brand-icon">◈</div>
+        <div>
+          <div class="brand-title">نظام إدارة بيانات الأيتام</div>
+          <div class="brand-sub">منصة آمنة لإدارة وعرض بيانات الأيتام والكفلاء وفق صلاحيات دقيقة</div>
+        </div>
+      </div>
+
+      <div class="login-panel">
+        <h1>تسجيل الدخول</h1>
+        <p>الدخول إلى الواجهة يتم بجلسة آمنة. البيانات لا تظهر إلا بعد البحث.</p>
+        <div id="loginNotice" class="notice hidden"></div>
+        <div class="form-grid single">
+          <label class="field"><span>البريد الإلكتروني أو اسم المستخدم</span><input id="loginUsername" class="input" autocomplete="username" placeholder="test@test.com أو admin" /></label>
+          <label class="field"><span>كلمة المرور</span><input id="loginPassword" class="input" type="password" autocomplete="current-password" /></label>
+          <button id="loginBtn" class="btn primary large">دخول إلى النظام</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dashboardWrap" class="app-shell hidden">
+    <aside class="sidebar glass" id="sidebar">
+      <div class="brand-side">
+        <button id="sidebarPinBtn" class="pin-btn" type="button" title="تثبيت القائمة"><i class="bi bi-pin-angle-fill"></i></button>
+        <div class="brand-icon small">◈</div>
+        <div>
+          <div class="brand-title small">نظام إدارة بيانات الأيتام</div>
+          <div class="brand-sub small">واجهة تشغيل موحدة</div>
+        </div>
+      </div>
+
+      <nav class="menu">
+        <button class="nav-btn active" data-view="overview"><span class="nav-icon"><i class="bi bi-grid-1x2-fill"></i></span><span class="nav-label">لوحة البيانات</span></button>
+        <button class="nav-btn" data-view="search"><span class="nav-icon"><i class="bi bi-search-heart-fill"></i></span><span class="nav-label">البحث</span></button>
+        <button class="nav-btn hidden" id="navUsers" data-view="users"><span class="nav-icon"><i class="bi bi-people-fill"></i></span><span class="nav-label">المستخدمون</span></button>
+        <button class="nav-btn hidden" id="navStats" data-view="stats"><span class="nav-icon"><i class="bi bi-bar-chart-fill"></i></span><span class="nav-label">الإحصائيات</span></button>
+        <button class="nav-btn hidden" id="navArchive" data-view="archive"><span class="nav-icon"><i class="bi bi-archive-fill"></i></span><span class="nav-label">الأرشيف</span></button>
+        <button class="nav-btn hidden" id="navLogs" data-view="logs"><span class="nav-icon"><i class="bi bi-journal-text"></i></span><span class="nav-label">سجل النشاط</span></button>
+        <button class="nav-btn hidden" id="navSettings" data-view="settings"><span class="nav-icon"><i class="bi bi-sliders2"></i></span><span class="nav-label">الإعدادات</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button id="logoutBtn" class="btn ghost full">تسجيل الخروج</button>
+      </div>
+    </aside>
+
+    <main class="main-shell">
+      <header class="topbar glass">
+        <div>
+          <h2 id="welcomeTitle">مرحبًا</h2>
+          <div class="muted" id="topbarHint">واجهة تشغيل مرنة مع بطاقات منظمة وصلاحيات دقيقة</div>
+        </div>
+        <div class="topbar-actions">
+          <button id="themeToggle" class="btn ghost">الوضع الفاتح</button>
+          <button id="changePasswordBtn" class="btn ghost">تغيير كلمة المرور</button>
+          <div class="user-chip" id="userChip">
+            <div class="avatar" id="avatarText">A</div>
+            <div class="user-chip-text">
+              <div id="userDisplay">admin</div>
+              <div class="muted" id="userRole">مدير نظام</div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section id="view-overview" class="view">
+        <div class="section-head">
+          <div>
+            <h3>لوحة البيانات</h3>
+            <p></p>
+          </div>
+          <div class="cta-group">
+            <button id="saveLayoutBtn" class="btn ghost">حفظ الترتيب</button>
+            <button id="resetLayoutBtn" class="btn ghost">إعادة الترتيب الافتراضي</button>
+          </div>
+        </div>
+        <div id="overviewCards" class="dashboard-grid"></div>
+      </section>
+
+      <section id="view-search" class="view hidden">
+        <div class="section-head">
+          <div>
+            <h3>البحث الذكي</h3>
+            <p>حقول مرتبة، بحث عام ومتقدم، نتائج على شكل بطاقات أو جدول، وتحميل تدريجي للنتائج.</p>
+          </div>
+          <div class="cta-group">
+            <button id="customizeCardsBtn" class="btn ghost">تخصيص الكروت</button>
+            <button id="exportExcelBtn" class="btn ghost hidden">تصدير Excel</button>
+            <button id="exportPdfBtn" class="btn ghost">تقرير PDF</button>
+          </div>
+        </div>
+
+        <div class="glass panel form-panel">
+          <div class="search-grid">
+            <label class="field">
+              <span>الشيتات</span>
+              <select id="searchSheets" class="select" multiple size="5"></select>
+            </label>
+            <label class="field">
+              <span>بحث عام</span>
+              <input id="globalQuery" class="input" placeholder="اسم الطفل، الكفيل، رقم الملف..." />
+            </label>
+            <label class="field">
+              <span>الترتيب حسب</span>
+              <select id="sortField" class="select"></select>
+            </label>
+            <label class="field">
+              <span>الاتجاه</span>
+              <select id="sortDirection" class="select">
+                <option value="asc">تصاعدي</option>
+                <option value="desc">تنازلي</option>
+              </select>
+            </label>
+          </div>
+          <div id="advancedFilters" class="advanced-grid"></div>
+          <div class="toolbar-row">
+            <div class="left-tools">
+              <button id="runSearchBtn" class="btn primary">تنفيذ البحث</button>
+              <button id="clearFiltersBtn" class="btn ghost">مسح الحقول</button>
+              <button id="addRecordBtn" class="btn success hidden">إضافة سجل</button>
+            </div>
+            <div class="right-tools">
+              <div class="segmented">
+                <button id="viewCardsBtn" class="btn ghost active">بطاقات</button>
+                <button id="viewTableBtn" class="btn ghost">جدول</button>
+              </div>
+              <label class="field tiny">
+                <span>عدد النتائج</span>
+                <select id="pageSize" class="select">
+                  <option value="12" selected>12</option>
+                  <option value="24">24</option>
+                  <option value="48">48</option>
+                  <option value="96">96</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-strip">
+          <div class="mini-stat"><span id="resultCount">0</span><small>نتيجة</small></div>
+          <div class="mini-stat"><span id="summaryImportant">0</span><small>نتائج مهمة</small></div>
+          <div class="mini-stat"><span id="summarySheets">0</span><small>شيتات ضمن النتائج</small></div>
+          <div class="mini-stat"><span id="summaryMode">بطاقات</span><small>وضع العرض</small></div>
+        </div>
+
+        <div class="results-tools">
+          <div class="muted" id="pagingText">لا توجد نتائج بعد</div>
+          <div id="resultMeta" class="muted"></div>
+        </div>
+
+        <div id="resultsArea"></div>
+        <div id="resultsSentinel" class="sentinel hidden">تحميل المزيد...</div>
+      </section>
+
+      <section id="view-users" class="view hidden">
+        <div class="section-head">
+          <div>
+            <h3>إدارة المستخدمين</h3>
+            <p>إنشاء مستخدمين وتعديل الصلاحيات والحقول الحساسة والوصول إلى الشيتات.</p>
+          </div>
+          <button id="newUserBtn" class="btn primary">إضافة مستخدم</button>
+        </div>
+        <div id="usersArea"></div>
+      </section>
+
+      <section id="view-stats" class="view hidden">
+        <div class="section-head">
+          <div>
+            <h3>الإحصائيات والتقارير</h3>
+            <p>إحصائيات قابلة للتخصيص حسب الشيت مع مؤشرات ورسوم بسيطة وواضحة.</p>
+          </div>
+          <div class="cta-group">
+            <label class="field tiny">
+              <span>اختيار الشيت</span>
+              <select id="statsSheetFilter" class="select"></select>
+            </label>
+          </div>
+        </div>
+        <div id="statsCards" class="stats-grid"></div>
+        <div class="glass panel">
+          <div class="panel-head">
+            <h4>التوزيع حسب الشيت</h4>
+          </div>
+          <div id="statsChartArea"></div>
+        </div>
+        <div id="statsReviewPanel" class="glass panel">
+          <div class="panel-head">
+            <h4>مراجعة البيانات</h4>
+            <button id="reviewDuplicatesBtn" class="btn ghost">فحص التكرار</button>
+          </div>
+          <div id="duplicatesArea" class="muted">يمكنك فحص الأسماء أو أرقام الهوية أو الجوال المتكررة.</div>
+        </div>
+      </section>
+
+      <section id="view-archive" class="view hidden">
+        <div class="section-head"><div><h3>الأرشيف</h3><p>السجلات المؤرشفة مع الاسترجاع.</p></div></div>
+        <div id="archiveArea"></div>
+      </section>
+
+      <section id="view-logs" class="view hidden">
+        <div class="section-head"><div><h3>سجل النشاط</h3><p>تتبع عمليات النظام والمستخدمين.</p></div></div>
+        <div id="logsArea"></div>
+      </section>
+
+      <section id="view-settings" class="view hidden">
+        <div class="section-head"><div><h3>إعدادات النظام</h3><p>هوية النظام والسياسات وعملات لوحة البيانات.</p></div></div>
+        <div class="glass panel settings-panel">
+          <div class="settings-grid">
+            <label class="field"><span>اسم النظام</span><input id="settingSystemName" class="input" /></label>
+            <label class="field"><span>الشعار النصي</span><input id="settingBrand" class="input" /></label>
+            <label class="field"><span>مدة الجلسة بالدقائق</span><input id="settingSessionMinutes" class="input" type="number" min="10" /></label>
+            <label class="field"><span>عدد المحاولات الخاطئة</span><input id="settingMaxAttempts" class="input" type="number" min="3" /></label>
+            <label class="field"><span>مدة القفل بالدقائق</span><input id="settingLockMinutes" class="input" type="number" min="1" /></label>
+            <label class="field"><span>الوضع الافتراضي</span><select id="settingTheme" class="select"><option value="dark">داكن</option><option value="light">فاتح</option></select></label>
+            <label class="field"><span>الدولار مقابل الشيكل</span><input id="settingRateUSD" class="input" type="number" step="0.0001" /></label>
+            <label class="field"><span>الدينار مقابل الشيكل</span><input id="settingRateJOD" class="input" type="number" step="0.0001" /></label>
+            <label class="field"><span>USDT مقابل الشيكل</span><input id="settingRateUSDT" class="input" type="number" step="0.0001" /></label>
+            <label class="field"><span>اسم عملة إضافية</span><input id="settingCustomCurrencyName" class="input" /></label>
+            <label class="field"><span>رمز العملة الإضافية</span><input id="settingCustomCurrencyCode" class="input" /></label>
+            <label class="field"><span>أيقونة العملة الإضافية (Bootstrap Icons)</span><input id="settingCustomCurrencyIcon" class="input" placeholder="bi bi-currency-exchange" /></label>
+            <label class="field"><span>قيمتها مقابل الشيكل</span><input id="settingCustomCurrencyRate" class="input" type="number" step="0.0001" /></label>
+          </div>
+          <div class="toolbar-row">
+            <button id="saveSettingsBtn" class="btn primary">حفظ الإعدادات</button>
+          </div>
+          <div class="panel-head" style="margin-top:18px"><h4>أسماء الحقول المعروضة</h4></div>
+          <div id="fieldAliasesArea"></div>
+          <div class="toolbar-row">
+            <button id="saveFieldAliasesBtn" class="btn ghost">حفظ أسماء الحقول</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+
+  <div id="currencyModal" class="modal">
+    <div class="modal-card glass">
+      <div class="panel-head">
+        <h4>تخصيص العملة الإضافية</h4>
+        <button class="btn ghost" onclick="closeModal('currencyModal')">إغلاق</button>
+      </div>
+      <div class="settings-grid">
+        <label class="field"><span>اسم العملة</span><input id="modalCurrencyName" class="input" placeholder="مثال: اليورو" /></label>
+        <label class="field"><span>رمز العملة</span><input id="modalCurrencyCode" class="input" placeholder="EUR" /></label>
+        <label class="field"><span>القيمة مقابل الشيكل</span><input id="modalCurrencyRate" class="input" type="number" step="0.0001" placeholder="4.03" /></label>
+        <label class="field"><span>أيقونة Bootstrap</span><input id="modalCurrencyIcon" class="input" placeholder="bi bi-currency-euro" /></label>
+      </div>
+      <div class="toolbar-row">
+        <button id="saveCurrencyBtn" class="btn primary">حفظ العملة</button>
+        <button id="clearCurrencyBtn" class="btn ghost">إزالة العملة الإضافية</button>
+      </div>
+      <div class="muted">يمكنك استخدام أي اسم أيقونة من Bootstrap Icons، مثل: bi bi-currency-dollar أو bi bi-currency-euro.</div>
+    </div>
+  </div>
+
+  <div id="recordModal" class="modal">
+    <div class="modal-card glass">
+      <div class="panel-head"><h4 id="recordModalTitle">إضافة سجل</h4><button class="btn ghost" onclick="closeModal('recordModal')">إغلاق</button></div>
+      <div id="recordFormBody"></div>
+    </div>
+  </div>
+
+  <div id="detailsModal" class="modal">
+    <div class="modal-card glass wide">
+      <div class="panel-head"><h4>تفاصيل السجل</h4><button class="btn ghost" onclick="closeModal('detailsModal')">إغلاق</button></div>
+      <div id="detailsBody"></div>
+    </div>
+  </div>
+
+  <div id="userModal" class="modal">
+    <div class="modal-card glass wide">
+      <div class="panel-head"><h4 id="userModalTitle">إضافة مستخدم</h4><button class="btn ghost" onclick="closeModal('userModal')">إغلاق</button></div>
+      <div id="userFormBody"></div>
+    </div>
+  </div>
+
+  <div id="passwordModal" class="modal">
+    <div class="modal-card glass small">
+      <div class="panel-head"><h4>تغيير كلمة المرور</h4><button class="btn ghost" onclick="closeModal('passwordModal')">إغلاق</button></div>
+      <div class="form-grid single">
+        <label class="field"><span>كلمة المرور الحالية</span><input id="currentPassword" class="input" type="password" /></label>
+        <label class="field"><span>كلمة المرور الجديدة</span><input id="newPassword" class="input" type="password" /></label>
+        <button id="savePasswordBtn" class="btn primary">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cardPrefsModal" class="modal">
+    <div class="modal-card glass wide">
+      <div class="panel-head"><h4>تخصيص كروت النتائج</h4><button class="btn ghost" onclick="closeModal('cardPrefsModal')">إغلاق</button></div>
+      <div class="form-grid single">
+        <label class="field">
+          <span>نمط الكرت</span>
+          <select id="cardDensity" class="select">
+            <option value="comfortable">مريح</option>
+            <option value="compact">مضغوط</option>
+            <option value="detailed">تفصيلي</option>
+          </select>
+        </label>
+        <div id="cardFieldsPrefs" class="checkbox-grid"></div>
+        <button id="saveCardPrefsBtn" class="btn primary">حفظ التخصيص</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

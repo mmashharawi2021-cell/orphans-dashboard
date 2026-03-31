@@ -1,0 +1,20 @@
+{
+  "name": "orphans-dashboard-pro",
+  "version": "2.0.0",
+  "description": "Secure glassmorphism dashboard for managing orphan data from Excel with users, permissions, archive, logs and stats",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": "20.x"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "firebase-admin": "^13.7.0",
+    "safe-buffer": "^5.2.1",
+    "xlsx": "^0.18.5"
+  }
+}
