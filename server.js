@@ -250,6 +250,16 @@ function writeUsers(users) {
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
 }
+
+async function getUserFromFirestoreByEmail(email) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return null;
+
+  const doc = await db.collection("users").doc(normalized).get();
+  if (!doc.exists) return null;
+
+  return doc.data();
+}
 function toFirestoreUserDoc(user) {
   return {
     id: user.id,
@@ -662,7 +672,6 @@ app.post("/api/login", async (req, res) => {
   const { username, password } = req.body || {};
   const loginId = String(username || "").trim();
   const pass = String(password || "");
-  const users = readUsers();
   const settings = getSettings();
   const isEmailLogin = loginId.includes("@");
 
@@ -671,15 +680,7 @@ app.post("/api/login", async (req, res) => {
   if (isEmailLogin) {
     try {
       const firebaseUser = await verifyFirebaseEmailPassword(loginId, pass);
-      user = users.find(u => String(u.email || '').toLowerCase() === String(firebaseUser.email || loginId).toLowerCase());
-      if (!user) {
-        const adminWithoutEmail = users.find(u => u.username === 'admin' && !u.email);
-        if (adminWithoutEmail) {
-          adminWithoutEmail.email = String(firebaseUser.email || loginId).toLowerCase();
-          writeUsers(users);
-          user = adminWithoutEmail;
-        }
-      }
+      user = await getUserFromFirestoreByEmail(firebaseUser.email || loginId);
       if (!user) {
         logAction(req, 'login_failed', { username: loginId, reason: 'firebase_user_not_mapped' });
         return res.status(403).json({ success: false, message: 'تم التحقق من Firebase لكن لا يوجد مستخدم نظام مرتبط بهذا البريد' });
@@ -689,6 +690,7 @@ app.post("/api/login", async (req, res) => {
       return res.status(401).json({ success: false, message: err.message || 'فشل تسجيل الدخول عبر Firebase' });
     }
   } else {
+    const users = readUsers();
     user = users.find(u => u.username === loginId);
     if (!user) {
       logAction(req, 'login_failed', { username: loginId, reason: 'not_found' });
@@ -722,7 +724,6 @@ app.post("/api/login", async (req, res) => {
 
   user.failedAttempts = 0;
   user.lockUntil = null;
-  writeUsers(users);
 
   req.session.user = publicUser(user);
   logAction(req, 'login_success', { username: user.username, loginId, via: isEmailLogin ? 'firebase' : 'local' });
