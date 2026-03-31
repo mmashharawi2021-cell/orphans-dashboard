@@ -1,6 +1,4 @@
 const admin = require("firebase-admin");
-const fs = require("fs");
-const path = require("path");
 
 function getFirebaseServiceAccount() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
@@ -49,12 +47,6 @@ const LOG_FILE = path.join(ROOT, "activity-log.json");
 const SETTINGS_FILE = path.join(ROOT, "settings.json");
 const BACKUPS_DIR = path.join(ROOT, "backups");
 
-const FIRESTORE_PRIMARY = !!(process.env.RENDER || process.env.FIRESTORE_PRIMARY === "1");
-const FIRESTORE_USERS_COLLECTION = "users";
-const FIRESTORE_LOGS_COLLECTION = "logs";
-const FIRESTORE_CONFIG_COLLECTION = "config";
-const FIRESTORE_SETTINGS_DOC = "settings";
-
 const INTERNAL_FIELDS = [
   "__record_id",
   "__created_by",
@@ -76,8 +68,7 @@ const DEFAULT_SETTINGS = {
   customCurrencyName: "",
   customCurrencyCode: "",
   customCurrencyRate: 0,
-  customCurrencyIcon: "bi bi-currency-exchange",
-  fieldAliases: {}
+  customCurrencyIcon: "bi bi-currency-exchange"
 };
 
 
@@ -166,8 +157,12 @@ const ROLE_PRESETS = {
   }
 };
 
-app.use(express.json({ limit: "25mb" }));
-app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+app.use(express.json({ limit: "8mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+app.set("trust proxy", 1);
+const isProduction = process.env.NODE_ENV === "production";
+
 app.use(session({
   secret: process.env.SESSION_SECRET || "orphans-dashboard-v3-secret",
   resave: false,
@@ -176,9 +171,11 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: "lax",
+    secure: isProduction,
     maxAge: 1000 * 60 * 60
   }
 }));
+
 app.use(express.static(PUBLIC_DIR));
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
@@ -240,13 +237,7 @@ function randomId(prefix = "id") {
 }
 function getSettings() {
   ensureFiles();
-  const settings = { ...DEFAULT_SETTINGS, ...readJson(SETTINGS_FILE, DEFAULT_SETTINGS) };
-  if (!settings.fieldAliases || typeof settings.fieldAliases !== "object") settings.fieldAliases = {};
-  return settings;
-}
-function writeSettings(settings) {
-  writeJson(SETTINGS_FILE, settings);
-  if (FIRESTORE_PRIMARY) syncSettingsToFirestore(settings).catch(err => console.error("settings firestore sync failed", err));
+  return { ...DEFAULT_SETTINGS, ...readJson(SETTINGS_FILE, DEFAULT_SETTINGS) };
 }
 function readUsers() {
   ensureFiles();
@@ -254,29 +245,10 @@ function readUsers() {
 }
 function writeUsers(users) {
   writeJson(USERS_FILE, users);
-  if (FIRESTORE_PRIMARY) syncUsersArrayToFirestore(users).catch(err => console.error("users firestore sync failed", err));
-}
-function normalizeFieldAliases(input) {
-  const out = {};
-  Object.entries(input || {}).forEach(([key, value]) => {
-    const k = String(key || "").trim();
-    const v = String(value || "").trim();
-    if (k && v) out[k] = v;
-  });
-  return out;
 }
 
 function normalizeEmail(value) {
   return String(value || "").trim().toLowerCase();
-}
-function getUserDocId(userOrEmail, fallbackId = "") {
-  if (typeof userOrEmail === "string") {
-    const normalized = normalizeEmail(userOrEmail);
-    return normalized || (fallbackId ? `id__${fallbackId}` : "");
-  }
-  const email = normalizeEmail(userOrEmail?.email || "");
-  if (email) return email;
-  return userOrEmail?.id ? `id__${userOrEmail.id}` : "";
 }
 function toFirestoreUserDoc(user) {
   return {
@@ -297,79 +269,14 @@ function toFirestoreUserDoc(user) {
   };
 }
 async function syncUserDocToFirestore(user) {
-  const docId = getUserDocId(user);
-  if (!docId) return;
-  await db.collection(FIRESTORE_USERS_COLLECTION).doc(docId).set(toFirestoreUserDoc(user), { merge: true });
+  const email = normalizeEmail(user.email || "");
+  if (!email) return;
+  await db.collection("users").doc(email).set(toFirestoreUserDoc(user), { merge: true });
 }
-async function deleteUserDocFromFirestore(email, fallbackId = "") {
-  const docId = getUserDocId(email, fallbackId);
-  if (!docId) return;
-  await db.collection(FIRESTORE_USERS_COLLECTION).doc(docId).delete().catch(() => {});
-}
-async function syncUsersArrayToFirestore(users) {
-  const snapshot = await db.collection(FIRESTORE_USERS_COLLECTION).get();
-  const existing = new Set(snapshot.docs.map(doc => doc.id));
-  const next = new Set();
-  const batch = db.batch();
-  for (const user of users || []) {
-    const docId = getUserDocId(user);
-    if (!docId) continue;
-    next.add(docId);
-    batch.set(db.collection(FIRESTORE_USERS_COLLECTION).doc(docId), toFirestoreUserDoc(user), { merge: true });
-  }
-  for (const docId of existing) {
-    if (!next.has(docId)) batch.delete(db.collection(FIRESTORE_USERS_COLLECTION).doc(docId));
-  }
-  await batch.commit();
-}
-async function hydrateUsersFromFirestore() {
-  const snapshot = await db.collection(FIRESTORE_USERS_COLLECTION).get();
-  if (snapshot.empty) {
-    await syncUsersArrayToFirestore(readJson(USERS_FILE, []));
-    return;
-  }
-  const users = snapshot.docs.map(doc => ({ ...doc.data() }));
-  writeJson(USERS_FILE, users);
-}
-async function syncSettingsToFirestore(settings) {
-  await db.collection(FIRESTORE_CONFIG_COLLECTION).doc(FIRESTORE_SETTINGS_DOC).set(settings, { merge: true });
-}
-async function hydrateSettingsFromFirestore() {
-  const ref = db.collection(FIRESTORE_CONFIG_COLLECTION).doc(FIRESTORE_SETTINGS_DOC);
-  const snap = await ref.get();
-  if (!snap.exists) {
-    await syncSettingsToFirestore({ ...DEFAULT_SETTINGS, ...readJson(SETTINGS_FILE, DEFAULT_SETTINGS) });
-    return;
-  }
-  const settings = { ...DEFAULT_SETTINGS, ...(snap.data() || {}) };
-  writeJson(SETTINGS_FILE, settings);
-}
-async function syncLogEntryToFirestore(entry) {
-  const docId = entry?.id || randomId("log");
-  await db.collection(FIRESTORE_LOGS_COLLECTION).doc(docId).set({ ...entry, id: docId }, { merge: true });
-}
-async function hydrateLogsFromFirestore() {
-  const snapshot = await db.collection(FIRESTORE_LOGS_COLLECTION).orderBy("at", "desc").limit(3000).get();
-  if (snapshot.empty) {
-    const localLogs = readJson(LOG_FILE, []);
-    if (localLogs.length) {
-      const batch = db.batch();
-      localLogs.forEach(item => {
-        const docId = item?.id || randomId("log");
-        batch.set(db.collection(FIRESTORE_LOGS_COLLECTION).doc(docId), { ...item, id: docId }, { merge: true });
-      });
-      await batch.commit();
-    }
-    return;
-  }
-  const logs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-  writeJson(LOG_FILE, logs);
-}
-async function hydrateRuntimeStateFromFirestore() {
-  if (!FIRESTORE_PRIMARY) return;
-  await hydrateSettingsFromFirestore();
-  await hydrateUsersFromFirestore();
-  await hydrateLogsFromFirestore();
+async function deleteUserDocFromFirestore(email) {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return;
+  await db.collection("users").doc(normalized).delete().catch(() => {});
 }
 async function createFirebaseAuthUserIfNeeded(user, plainPassword) {
   const email = normalizeEmail(user.email || "");
@@ -481,10 +388,8 @@ function readLogs() {
 }
 function appendLog(entry) {
   const logs = readLogs();
-  const logEntry = { id: randomId("log"), at: nowIso(), ...entry };
-  logs.unshift(logEntry);
+  logs.unshift({ id: randomId("log"), at: nowIso(), ...entry });
   writeJson(LOG_FILE, logs.slice(0, 3000));
-  if (FIRESTORE_PRIMARY) syncLogEntryToFirestore(logEntry).catch(err => console.error("log firestore sync failed", err));
 }
 function logAction(req, action, details = {}) {
   appendLog({
@@ -723,6 +628,9 @@ function paginate(arr, page, pageSize) {
   const start = (p - 1) * size;
   return { items: arr.slice(start, start + size), page: p, pageSize: size, total: arr.length };
 }
+
+ensureFiles();
+normalizeWorkbook();
 
 app.get("/api/bootstrap", requireAuth, (req, res) => {
   const workbook = readWorkbook();
@@ -981,12 +889,12 @@ app.put("/api/users/:id", requireAuth, requirePerm("canManageUsers"), async (req
       });
     } else if (previousEmail) {
       await deleteFirebaseAuthUserByEmail(previousEmail);
-      await deleteUserDocFromFirestore(previousEmail, target.id);
+      await deleteUserDocFromFirestore(previousEmail);
     }
 
     writeUsers(users);
     if (previousEmail && previousEmail !== nextEmail) {
-      await deleteUserDocFromFirestore(previousEmail, target.id);
+      await deleteUserDocFromFirestore(previousEmail);
     }
     await syncUserDocToFirestore(target);
 
@@ -1013,7 +921,7 @@ app.delete("/api/users/:id", requireAuth, requirePerm("canManageUsers"), async (
 
     if (removed.email) {
       await deleteFirebaseAuthUserByEmail(removed.email);
-      await deleteUserDocFromFirestore(removed.email, removed.id);
+      await deleteUserDocFromFirestore(removed.email);
     }
 
     logAction(req, "user_delete", { username: removed.username, email: normalizeEmail(removed.email || "") });
@@ -1125,44 +1033,38 @@ app.post("/api/records", requireAuth, requirePerm("canAdd"), (req, res) => {
 });
 
 app.put("/api/records/:sheetName/:recordId", requireAuth, (req, res) => {
-  try {
-    const workbook = readWorkbook();
-    const sheetName = decodeURIComponent(req.params.sheetName);
-    const recordId = decodeURIComponent(req.params.recordId || "");
-    if (!matchesSheetAccess(req.session.user, sheetName)) {
-      return res.status(403).json({ success: false, message: "ليست لديك صلاحية على هذا الشيت" });
-    }
-    const parsed = parseSheet(workbook, sheetName);
-    const idx = parsed.records.findIndex(r => String(r.__record_id || "") === recordId);
-    if (idx === -1) return res.status(404).json({ success: false, message: "السجل غير موجود" });
-
-    const current = parsed.records[idx];
-    if (!canEditThisRecord(req.session.user, current)) {
-      return res.status(403).json({ success: false, message: "ليست لديك صلاحية تعديل هذا السجل" });
-    }
-
-    const updates = req.body?.record || {};
-    const before = {};
-    const after = {};
-    parsed.visibleHeaders.forEach(h => {
-      before[h] = current[h];
-      if (updates[h] !== undefined) {
-        if (!(isSensitiveHeader(h) && !req.session.user.permissions?.canEditSensitive)) {
-          current[h] = formatCell(updates[h]);
-        }
-      }
-      after[h] = current[h];
-    });
-    current.__updated_by = req.session.user.username;
-    current.__updated_at = nowIso();
-
-    saveSheet(workbook, sheetName, parsed.visibleHeaders, parsed.records);
-    logAction(req, "record_edit", { sheetName, recordId, before, after });
-    res.json({ success: true, message: "تم تعديل السجل" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || "تعذر حفظ التعديلات" });
+  const workbook = readWorkbook();
+  const sheetName = decodeURIComponent(req.params.sheetName);
+  const recordId = req.params.recordId;
+  if (!matchesSheetAccess(req.session.user, sheetName)) {
+    return res.status(403).json({ success: false, message: "ليست لديك صلاحية على هذا الشيت" });
   }
+  const parsed = parseSheet(workbook, sheetName);
+  const idx = parsed.records.findIndex(r => r.__record_id === recordId);
+  if (idx === -1) return res.status(404).json({ success: false, message: "السجل غير موجود" });
+
+  const current = parsed.records[idx];
+  if (!canEditThisRecord(req.session.user, current)) {
+    return res.status(403).json({ success: false, message: "ليست لديك صلاحية تعديل هذا السجل" });
+  }
+
+  const updates = req.body?.record || {};
+  const before = {};
+  const after = {};
+  parsed.visibleHeaders.forEach(h => {
+    before[h] = current[h];
+    if (updates[h] !== undefined) {
+      if (isSensitiveHeader(h) && !req.session.user.permissions?.canEditSensitive) return;
+      current[h] = formatCell(updates[h]);
+    }
+    after[h] = current[h];
+  });
+  current.__updated_by = req.session.user.username;
+  current.__updated_at = nowIso();
+
+  saveSheet(workbook, sheetName, parsed.visibleHeaders, parsed.records);
+  logAction(req, "record_edit", { sheetName, recordId, before, after });
+  res.json({ success: true, message: "تم تعديل السجل" });
 });
 
 app.delete("/api/records/:sheetName/:recordId", requireAuth, requirePerm("canArchive"), (req, res) => {
@@ -1219,38 +1121,6 @@ app.post("/api/archive/:archiveId/restore", requireAuth, requirePerm("canRestore
   writeArchive(archive);
   logAction(req, "record_restore", { archiveId: item.archiveId, sheetName: item.originalSheet, recordId: item.record.__record_id });
   res.json({ success: true, message: "تم استرجاع السجل" });
-});
-
-
-app.post("/api/fields/rename", requireAuth, requirePerm("canManageSettings"), (req, res) => {
-  try {
-    const sheetName = String(req.body?.sheetName || "").trim();
-    const from = String(req.body?.from || "").trim();
-    const to = String(req.body?.to || "").trim();
-    if (!sheetName || !from || !to) return res.status(400).json({ success: false, message: "بيانات تعديل الحقل غير مكتملة" });
-    if (from === to) return res.json({ success: true, message: "لا يوجد تغيير" });
-    const workbook = readWorkbook();
-    if (!workbook.SheetNames.includes(sheetName)) return res.status(404).json({ success: false, message: "الشيت غير موجود" });
-    const parsed = parseSheet(workbook, sheetName);
-    if (!parsed.visibleHeaders.includes(from)) return res.status(404).json({ success: false, message: "الحقل غير موجود" });
-    if (parsed.visibleHeaders.includes(to)) return res.status(400).json({ success: false, message: "اسم الحقل الجديد موجود بالفعل" });
-    const nextHeaders = parsed.visibleHeaders.map(h => h === from ? to : h);
-    parsed.records.forEach(record => {
-      record[to] = record[from];
-      delete record[from];
-    });
-    saveSheet(workbook, sheetName, nextHeaders, parsed.records);
-    const settings = getSettings();
-    const aliases = normalizeFieldAliases(settings.fieldAliases || {});
-    if (aliases[from] && !aliases[to]) aliases[to] = aliases[from];
-    delete aliases[from];
-    writeSettings({ ...settings, fieldAliases: aliases })
-    logAction(req, "field_rename", { sheetName, from, to });
-    res.json({ success: true, message: "تم تعديل اسم الحقل" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message || "تعذر تعديل اسم الحقل" });
-  }
 });
 
 app.get("/api/stats", requireAuth, requirePerm("canViewStats"), (req, res) => {
@@ -1339,7 +1209,7 @@ app.get("/api/live-rates", requireAuth, async (req, res) => {
 app.put("/api/settings", requireAuth, requirePerm("canManageSettings"), (req, res) => {
   const current = getSettings();
   const next = { ...current, ...(req.body || {}) };
-  writeSettings(next)
+  writeJson(SETTINGS_FILE, next);
   logAction(req, "settings_update", { keys: Object.keys(req.body || {}) });
   res.json({ success: true, settings: next, message: "تم حفظ الإعدادات" });
 });
